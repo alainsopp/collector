@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%234f46e5%22/><text x=%2250%22 y=%2276%22 font-size=%2278%22 text-anchor=%22middle%22 fill=%22white%22>⚡</text></svg>">
+
+<title>Collector</title>
+<style>
+*{box-sizing:border-box}
+:root{
+--bg:linear-gradient(135deg,#eef2ff,#f8fafc 55%,#e0f2fe);
+--card:#fff;--border:#e5eaf2;--text:#172033;--muted:#64748b;
+--input:#fff;--accent:#4f46e5;--toggle:#f1f5f9;
+}
+body.dark{
+color-scheme:dark;--bg:linear-gradient(135deg,#0b1120,#111827 55%,#172554);
+--card:#182235;--border:#2b374c;--text:#f1f5f9;--muted:#a0aec0;
+--input:#111a2b;--accent:#818cf8;--toggle:#253148;
+}
+body{margin:0;min-height:100vh;padding:24px;font-family:system-ui,sans-serif;background:var(--bg);color:var(--text)}
+.app{max-width:760px;margin:auto}
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px;margin-bottom:18px;box-shadow:0 15px 40px #0000000d}
+.top,.heading,.actions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{font-weight:800;letter-spacing:1px}
+.brand span{display:inline-grid;place-items:center;background:var(--accent);color:white;width:34px;height:34px;border-radius:9px;margin-right:8px}
+h1{font-size:28px;margin:22px 0 8px}
+h2{font-size:19px}
+p{color:var(--muted);line-height:1.5}
+.eyebrow{color:var(--accent);font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase}
+.field{margin:18px 0}
+label{display:block;font-size:13px;font-weight:650;margin-bottom:7px}
+input:not([type=file]){width:100%;height:46px;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--input);color:var(--text);font:inherit}
+button{font:inherit;font-weight:650;border:0;border-radius:9px;padding:11px 15px;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid #818cf855;outline-offset:2px}
+.primary{background:var(--accent);color:white}
+.secondary,.theme-switch{background:var(--toggle);color:var(--text)}
+.theme-switch{padding:4px;border-radius:9px}
+.theme-switch button{font-size:12px;padding:8px}
+.theme-switch button.active{background:var(--card)}
+.submit{width:100%;margin-top:8px}
+.actions{justify-content:flex-start;margin:18px 0}
+input[type=file]{display:none}
+.count{background:var(--toggle);padding:6px 10px;border-radius:20px;font-size:12px}
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px}
+table{width:100%;border-collapse:collapse;text-align:left;font-size:13px;white-space:nowrap}
+th,td{padding:12px;border-bottom:1px solid var(--border)}
+th{background:var(--toggle)}
+tbody tr:last-child td{border-bottom:0}
+.empty{text-align:center;padding:22px;color:var(--muted);font-size:13px}
+.status{font-size:13px;overflow-wrap:anywhere}
+.success{color:#16a34a!important}
+.error{color:#dc2626!important}
+@media(max-width:480px){body{padding:12px}.card{padding:19px}.actions button{flex:1}}
+.chart-legend {display: flex;gap: 20px;flex-wrap: wrap;margin: 12px 0 18px;
+  font-size: 13px;color: var(--muted);}
+.chart-legend span { display: flex;
+  align-items: center;
+  gap: 7px;}
+.legend-dot {  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;}
+.error-dot { background: #4f46e5;}
+.e-dot {  background: #0ea5e9;}
+.chart-container {  position: relative;width: 100%;
+  height: 280px;}
+#recordsChart {  display: block;
+  width: 100%;
+  height: 100%;}
+@media (max-width: 480px) {.chart-container {
+    height: 230px;}}
+.field-with-button { display: flex;
+  gap: 8px; align-items: center;}
+.field-with-button input { flex: 1;
+  min-width: 0;}
+.field-with-button button {  white-space: nowrap;
+  height: 46px;  padding: 8px 12px;}    
+</style>
+</head>
+<body>
+<main class="app">
+<section class="card">
+  <div class="heading">
+    <div>
+      <p class="eyebrow">Suivi des données</p>
+      <h2>Évolution des relèves</h2>
+      <p id="chartPeriod">7 derniers jours, aujourd'hui inclus</p>
+    </div>
+    <span class="count" id="chartCount">0 relevé</span>
+  </div>
+
+  <div class="chart-legend" id="chartLegend">
+	  <span><i class="legend-dot error-dot"></i> Série 1</span>
+  	<span><i class="legend-dot e-dot"></i> Série 2</span>
+	</div>
+
+  <div class="chart-container">
+    <canvas id="recordsChart"
+      role="img"
+      aria-label="Graphique des valeurs Error et E sur les sept derniers jours">
+    </canvas>
+  </div>
+
+  <p id="chartEmpty" class="empty" hidden>
+    Aucun relevé sur les 7 derniers jours.
+  </p>
+</section>
+<section class="card">
+  <div class="top">
+    <div class="brand"><span>✦</span>COLLECTOR</div>
+    <div class="theme-switch">
+      <button type="button" data-theme="light" class="active">☀️ Clair</button>
+      <button type="button" data-theme="dark">🌙 Sombre</button>
+    </div>
+  </div>
+  <header>
+    <p class="eyebrow">Saisie de données</p>
+    <h1>Relève</h1>
+    <p>Renseigner la date, l'heure, la marge d'erreur et la valeur E.</p>
+  </header>
+  <form id="errorForm">
+	<div class="field">
+		<label for="date">Date</label>
+		<div class="field-with-button">
+		  <input type="date" id="date" required>
+		  <button type="button" class="secondary" id="todayButton">
+		    Aujourd'hui
+		  </button>
+		</div>
+	</div>
+	<div class="field">
+		<label for="time">Heure</label>
+		<div class="field-with-button">
+		  <input type="time" id="time" required>
+		  <button type="button" class="secondary" id="nowButton">
+		    Maintenant
+		  </button>
+		</div>
+	</div>
+    <div class="field">
+      <label for="error">Error</label>
+      <input id="error" inputmode="numeric" pattern="[0-9]+" placeholder="Enter error number" required>
+    </div>
+<div class="field">
+  <label for="flr">E</label>
+  <div class="field-with-button">
+    <input
+      id="flr"
+      inputmode="numeric"
+      pattern="[0-9]+"
+      placeholder="Entrer E"
+      required
+    >
+    <button type="button" class="secondary" data-e-value="3">3</button>
+    <button type="button" class="secondary" data-e-value="4">4</button>
+  </div>
+</div>
+    <button class="primary submit" type="submit">＋ Enregistrer</button>
+  </form>
+</section>
+
+<section class="card">
+  <div class="heading">
+    <h2>Historique des relevés</h2>
+    <span class="count" id="recordCount">0 saisie</span>
+  </div>
+  <div class="actions">
+    <button type="button" class="primary" id="exportButton">↓ Exporter CSV</button>
+    <button type="button" class="secondary" id="importButton">↑ Importer CSV</button>
+    <input type="file" id="csvFile" accept=".csv,text/csv">
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Time</th><th>Error</th><th>E</th></tr></thead>
+      <tbody id="recordsBody"></tbody>
+    </table>
+    <div class="empty" id="emptyState">Aucune saisie pour le moment.</div>
+  </div>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+</section>
+</main>
+
+<script>
+// Remplir rapidement le champ E avec 3 ou 4.
+document.querySelectorAll("[data-e-value]").forEach(button => {
+  button.addEventListener("click", () => {
+    document.getElementById("flr").value = button.dataset.eValue;
+  });
+});
+
+// Objet JavaScript qui contient toutes les saisies.
+const STORAGE_KEY = "collector_saisieData";
+let saisieData = [];
+
+// Remplir automatiquement la date locale du jour.
+document.getElementById("todayButton").addEventListener("click", () => {
+  const now = new Date();
+
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  document.getElementById("date").value =
+    `${year}-${month}-${day}`;
+});
+
+// Remplir automatiquement l'heure locale actuelle.
+document.getElementById("nowButton").addEventListener("click", () => {
+  const now = new Date();
+
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+
+  document.getElementById("time").value =
+    `${hours}:${minutes}`;
+});
+
+function isValidRecord(r) {
+  return r && typeof r.date === "string" &&
+    typeof r.time === "string" &&
+    typeof r.error === "string" &&
+    typeof r.e === "string";
+}
+
+// Restaurer les données sauvegardées dans le navigateur.
+try {
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  if (Array.isArray(saved)) saisieData = saved.filter(isValidRecord);
+} catch (err) {
+  console.error("Lecture des données impossible", err);
+}
+
+function saveData() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saisieData));
+    return true;
+  } catch (err) {
+    showStatus("Sauvegarde locale impossible.", "error");
+    return false;
+  }
+}
+
+function showStatus(message, type = "") {
+  const status = document.getElementById("status");
+  status.textContent = message;
+  status.className = "status " + type;
+}
+
+// Thème clair / sombre.
+document.querySelectorAll("[data-theme]").forEach(button => {
+  button.addEventListener("click", () => {
+    const dark = button.dataset.theme === "dark";
+    document.body.classList.toggle("dark", dark);
+    document.querySelectorAll("[data-theme]").forEach(b => {
+      b.classList.toggle("active", b === button);
+      b.setAttribute("aria-pressed", String(b === button));
+    });
+  });
+});
+
+// N'autoriser que les chiffres dans les champs Error et E.
+["error", "flr"].forEach(id => {
+  document.getElementById(id).addEventListener("input", event => {
+    event.target.value = event.target.value.replace(/\D/g, "");
+  });
+});
+
+// Graphique des relevés sur 7 jours glissants.
+
+function renderChart() {
+  const canvas = document.getElementById("recordsChart");
+  const container = canvas.parentElement;
+  const ctx = canvas.getContext("2d");
+  const empty = document.getElementById("chartEmpty");
+  const count = document.getElementById("chartCount");
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - 6);
+
+  const dateKey = date =>
+    date.getFullYear() + "-" +
+    String(date.getMonth() + 1).padStart(2, "0") + "-" +
+    String(date.getDate()).padStart(2, "0");
+
+  const firstDay = dateKey(startDate);
+  const lastDay = dateKey(today);
+
+  // Relevés des 7 jours, entre 06:00 et minuit.
+  const records = saisieData.filter(r => {
+    if (r.date < firstDay || r.date > lastDay) return false;
+    if (!/^\d{2}:\d{2}$/.test(r.time)) return false;
+
+    const [hours, minutes] = r.time.split(":").map(Number);
+
+    return hours >= 6 && hours <= 23 &&
+      minutes >= 0 && minutes <= 59;
+  });
+
+  // Deux séries identifiées par la colonne E.
+  const seriesValues = [...new Set(records.map(r => r.e))].slice(0, 2);
+
+  count.textContent =
+    records.length + (records.length > 1 ? " relevés" : " relevé");
+
+  document.getElementById("chartPeriod").textContent =
+    "7 jours glissants · 06:00–00:00";
+
+  empty.hidden = records.length > 0;
+  canvas.hidden = records.length === 0;
+
+  if (!records.length) return;
+
+  const rect = container.getBoundingClientRect();
+  const width = rect.width;
+  const height = rect.height;
+  const ratio = window.devicePixelRatio || 1;
+
+  canvas.width = Math.round(width * ratio);
+  canvas.height = Math.round(height * ratio);
+
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+
+  const styles = getComputedStyle(document.body);
+  const textColor = styles.getPropertyValue("--muted").trim();
+  const gridColor = styles.getPropertyValue("--border").trim();
+
+  // Plus de place en largeur pour les heures.
+  const left = 48;
+  const right = 12;
+  const top = 22;
+  const bottom = 35;
+
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+
+  // Axe X : minutes depuis 06:00.
+  const x = time => {
+    const [hours, minutes] = time.split(":").map(Number);
+    const elapsed = hours * 60 + minutes - 360;
+    return left + (elapsed / 1080) * plotWidth;
+  };
+
+  // Axe Y : position du jour dans la période de 7 jours.
+  const y = date => {
+    const [year, month, day] = date.split("-").map(Number);
+    const d = new Date(year, month - 1, day);
+    const index = Math.round((d - startDate) / 86400000);
+    return top + plotHeight - (index / 6) * plotHeight;
+  };
+
+  ctx.font = "11px system-ui";
+  ctx.lineWidth = 1;
+
+  // Axe horizontal : heures de 06:00 à 00:00.
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+
+  for (let minute = 0; minute <= 1080; minute += 60) {
+    const px = left + (minute / 1080) * plotWidth;
+    const hour = ((360 + minute) / 60) % 24;
+    const label = String(hour).padStart(2, "0") + ":00";
+
+    ctx.fillStyle = textColor;
+    ctx.fillText(label, px, top + plotHeight + 8);
+  }
+
+  // Axe vertical : jours.
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(startDate);
+    day.setDate(startDate.getDate() + i);
+
+    const px = y(dateKey(day));
+    const label = day.toLocaleDateString("fr-FR", {
+      weekday: "short",
+      day: "2-digit",
+      month: "2-digit"
+    });
+
+    ctx.fillStyle = textColor;
+    ctx.fillText(label, left - 8, px);
+  }
+
+  
+  // Deux séries distinguées par E, avec traîne d'incertitude.
+  const colors = ["#4f46e5", "#0ea5e9"];
+
+  seriesValues.forEach((value, index) => {
+    const color = colors[index];
+
+    records
+      .filter(r => r.e === value)
+      .forEach(record => {
+        const [hours, minutes] = record.time.split(":").map(Number);
+        const errorMinutes = Math.max(0, Number(record.error) || 0);
+
+        const pointX = x(record.time);
+        const pointY = y(record.date);
+        const radius = 4;
+
+        // Limiter la traîne au début de la plage affichée : 06:00.
+        const startMinutes = Math.max(
+          360,
+          hours * 60 + minutes - errorMinutes
+        );
+
+        const endMinutes = hours * 60 + minutes;
+
+        // Dessiner la traîne si la marge d'erreur est positive.
+        if (errorMinutes > 0 && endMinutes > startMinutes) {
+          const startX = left +
+            ((startMinutes - 360) / 1080) * plotWidth;
+
+          const gradient = ctx.createLinearGradient(
+            startX, 0, pointX, 0
+          );
+
+          // Transparente au début, opaque à l'arrivée.
+          gradient.addColorStop(0, color + "00");
+          gradient.addColorStop(1, color + "FF");
+
+          ctx.save();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = gradient;
+
+          // Bande horizontale centrée sur le point.
+          ctx.fillRect(
+            startX,
+            pointY - 3,
+            Math.max(0, pointX - startX),
+            6
+          );
+
+          ctx.restore();
+        }
+
+        // Le point du relevé reste toujours opaque.
+        ctx.beginPath();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = color;
+        ctx.arc(pointX, pointY, radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+  });
+}
+
+
+// Afficher les saisies dans le tableau.
+function renderRecords() {
+  const tbody = document.getElementById("recordsBody");
+  tbody.replaceChildren();
+
+  saisieData.forEach(record => {
+    const tr = document.createElement("tr");
+    [record.date, record.time, record.error, record.e].forEach(value => {
+      const td = document.createElement("td");
+      td.textContent = value;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById("emptyState").hidden = saisieData.length > 0;
+  document.getElementById("recordCount").textContent =
+    saisieData.length + (saisieData.length > 1 ? " saisies" : " saisie");
+  renderChart();
+}
+
+// Chaque nouvelle soumission ajoute une nouvelle ligne.
+document.getElementById("errorForm").addEventListener("submit", event => {
+  event.preventDefault();
+  if (!event.currentTarget.reportValidity()) return;
+
+  saisieData.push({
+    date: document.getElementById("date").value,
+    time: document.getElementById("time").value,
+    error: document.getElementById("error").value,
+    e: document.getElementById("flr").value
+  });
+
+  saveData();
+  renderRecords();
+  event.currentTarget.reset();
+  showStatus("Saisie enregistrée.", "success");
+});
+
+// Export CSV avec séparateur point-virgule.
+document.getElementById("exportButton").addEventListener("click", () => {
+  const headers = ["date", "time", "error", "e"];
+
+  const escapeCSV = value => {
+    const s = String(value ?? "");
+    return /[;"\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+
+  const csv = [
+    headers.join(";"),
+    ...saisieData.map(record =>
+      headers.map(key => escapeCSV(record[key])).join(";")
+    )
+  ].join("\r\n");
+
+  const blob = new Blob(["\uFEFF" + csv], {
+    type: "text/csv;charset=utf-8;"
+  });
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "releves.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  showStatus(saisieData.length + " saisie(s) exportée(s).", "success");
+});
+
+// Ouvrir le sélecteur de fichier.
+document.getElementById("importButton").addEventListener("click", () => {
+  const input = document.getElementById("csvFile");
+  input.value = "";
+  input.click();
+});
+
+// Parser une ligne CSV, y compris les champs entre guillemets.
+function parseCSVLine(line, delimiter) {
+  const fields = [];
+  let field = "";
+  let quoted = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+
+    if (c === '"') {
+      if (quoted && line[i + 1] === '"') {
+        field += '"';
+        i++;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (c === delimiter && !quoted) {
+      fields.push(field);
+      field = "";
+    } else {
+      field += c;
+    }
+  }
+
+  if (quoted) throw new Error("Guillemets CSV non fermés.");
+  fields.push(field);
+  return fields;
+}
+
+// Importer un fichier CSV et charger ses données dans saisieData.
+document.getElementById("csvFile").addEventListener("change", async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    let content = await file.text();
+    content = content.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+
+    const lines = content.split("\n").filter(line => line.trim() !== "");
+    if (!lines.length) throw new Error("Le fichier est vide.");
+
+    const delimiter = lines[0].includes(";") ? ";" : ",";
+    const headers = parseCSVLine(lines[0], delimiter)
+      .map(h => h.trim().toLowerCase());
+    const expected = ["date", "time", "error", "e"];
+
+    if (headers.length !== 4 || !expected.every(h => headers.includes(h))) {
+      throw new Error("Colonnes attendues : date;time;error;e.");
+    }
+
+    const imported = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const fields = parseCSVLine(lines[i], delimiter);
+      if (fields.length !== headers.length) {
+        throw new Error("Nombre de colonnes incorrect ligne " + (i + 1));
+      }
+
+      const record = {};
+      headers.forEach((h, j) => record[h] = fields[j].trim());
+
+      if (!isValidRecord(record) ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(record.date) ||
+          !/^\d{2}:\d{2}$/.test(record.time) ||
+          !/^\d+$/.test(record.error) ||
+          !/^\d+$/.test(record.e)) {
+        throw new Error("Données invalides ligne " + (i + 1));
+      }
+
+      imported.push(record);
+    }
+
+    // L'import remplace l'historique existant.
+    saisieData = imported;
+    saveData();
+    renderRecords();
+    showStatus(imported.length + " saisie(s) importée(s).", "success");
+  } catch (err) {
+    showStatus("Importation impossible : " + err.message, "error");
+  }
+});
+
+// Afficher les données existantes au démarrage.
+renderRecords();
+window.addEventListener("resize", renderChart);
+</script>
+</body>
+</html>
