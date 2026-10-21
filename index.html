@@ -364,7 +364,7 @@ function renderChart() {
   for (let minute = 0; minute <= 1080; minute += 60) {
     const px = left + (minute / 1080) * plotWidth;
     const hour = ((360 + minute) / 60) % 24;
-    const label = String(hour).padStart(2, "0") + ":00";
+    const label = String(hour);
 
     ctx.fillStyle = textColor;
     ctx.fillText(label, px, top + plotHeight + 8);
